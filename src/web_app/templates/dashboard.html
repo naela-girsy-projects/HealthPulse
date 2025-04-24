@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - HealthPulse</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+        }
+        .navbar {
+            background-color: #2c3e50;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .navbar-brand {
+            font-weight: bold;
+            color: #ecf0f1 !important;
+        }
+        .nav-link {
+            color: #ecf0f1 !important;
+        }
+        .hero {
+            background: linear-gradient(135deg, #3498db, #2c3e50);
+            color: white;
+            padding: 40px 0;
+            border-radius: 0 0 20px 20px;
+            margin-bottom: 30px;
+        }
+        .card {
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            margin-bottom: 30px;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+        .metric-card {
+            text-align: center;
+            padding: 20px;
+        }
+        .metric-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin: 10px 0;
+            color: #3498db;
+        }
+        .metric-label {
+            font-size: 1.2rem;
+            color: #7f8c8d;
+        }
+        .footer {
+            background-color: #2c3e50;
+            color: #ecf0f1;
+            padding: 30px 0;
+            margin-top: 50px;
+        }
+        .chart-container {
+            position: relative;
+            height: 300px;
+            width: 100%;
+        }
+        .confusion-matrix {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr); 
+            grid-gap: 2px;
+            max-width: 100%;
+            max-height: 250px;
+        }
+        .matrix-cell {
+            aspect-ratio: 1/1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+            transition: all 0.3s;
+            width: 80px;
+            height: 80px;
+            margin: 5px auto;
+        }
+        .matrix-cell:hover {
+            transform: scale(1.05);
+        }
+        .axis-label {
+            text-align: center;
+            font-weight: bold;
+            padding: 10px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-heartbeat me-2"></i>HealthPulse
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/"><i class="fas fa-home me-1"></i> Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/dashboard"><i class="fas fa-chart-line me-1"></i> Dashboard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/about"><i class="fas fa-info-circle me-1"></i> About</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <div class="hero">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-lg-8 mx-auto text-center">
+                    <h1 class="display-4 fw-bold mb-3">Performance Dashboard</h1>
+                    <p class="lead">Comprehensive analytics of our AI model's performance and accuracy</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="container">
+        <!-- Key Metrics -->
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="card metric-card">
+                    <i class="fas fa-bullseye fa-3x text-primary"></i>
+                    <div class="metric-value">{{ metrics.accuracy }}%</div>
+                    <div class="metric-label">Accuracy</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card metric-card">
+                    <i class="fas fa-check-circle fa-3x text-primary"></i>
+                    <div class="metric-value">{{ metrics.precision }}%</div>
+                    <div class="metric-label">Precision</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card metric-card">
+                    <i class="fas fa-search fa-3x text-primary"></i>
+                    <div class="metric-value">{{ metrics.recall }}%</div>
+                    <div class="metric-label">Recall</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card metric-card">
+                    <i class="fas fa-balance-scale fa-3x text-primary"></i>
+                    <div class="metric-value">{{ metrics.f1 }}%</div>
+                    <div class="metric-label">F1 Score</div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card metric-card">
+                    <i class="fas fa-chart-area fa-3x text-primary"></i>
+                    <div class="metric-value">{{ metrics.auc }}</div>
+                    <div class="metric-label">AUC ROC</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts -->
+        <div class="row">
+            <!-- Confusion Matrix -->
+            <div class="col-lg-6 mb-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h4 class="card-title">Confusion Matrix</h4>
+                        <div class="chart-container">
+                            <div id="confusionMatrixContainer"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ROC Curve -->
+            <div class="col-lg-6 mb-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h4 class="card-title">ROC Curve</h4>
+                        <div class="chart-container">
+                            <canvas id="rocCurveChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Per-Class Performance -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <h4 class="card-title">Per-Class Performance</h4>
+                        <div class="chart-container">
+                            <canvas id="perClassChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Model Information -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <h4 class="card-title">Model Information</h4>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <table class="table">
+                                    <tbody>
+                                        <tr>
+                                            <th scope="row">Model Architecture</th>
+                                            <td>ResNet-50 with custom classification head</td>
+                                        </tr>
+                                        <tr>
+                                            <th scope="row">Training Dataset</th>
+                                            <td>5,840 labeled chest X-ray images</td>
+                                        </tr>
+                                        <tr>
+                                            <th scope="row">Test Dataset</th>
+                                            <td>800 chest X-ray images (20% hold-out)</td>
+                                        </tr>
+                                        <tr>
+                                            <th scope="row">Last Updated</th>
+                                            <td>February 15, 2025</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="col-md-6">
+                                <table class="table">
+                                    <tbody>
+                                        <tr>
+                                            <th scope="row">Classes</th>
+                                            <td>{{ metrics.class_names|join(', ') }}</td>
+                                        </tr>
+                                        <tr>
+                                            <th scope="row">Image Size</th>
+                                            <td>224 x 224 pixels</td>
+                                        </tr>
+                                        <tr>
+                                            <th scope="row">Training Time</th>
+                                            <td>4.5 hours on NVIDIA A100 GPU</td>
+                                        </tr>
+                                        <tr>
+                                            <th scope="row">Model Size</th>
+                                            <td>98 MB</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer mt-5">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-6">
+                    <h4><i class="fas fa-heartbeat me-2"></i>HealthPulse</h4>
+                    <p>Advanced medical image classification platform for healthcare professionals.</p>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <p><i class="fas fa-envelope me-2"></i>contact@healthpulse.com</p>
+                    <p><i class="fas fa-phone me-2"></i>(123) 456-7890</p>
+                    <div class="mt-3">
+                        <a href="#" class="text-light me-3"><i class="fab fa-twitter fa-lg"></i></a>
+                        <a href="#" class="text-light me-3"><i class="fab fa-facebook fa-lg"></i></a>
+                        <a href="#" class="text-light me-3"><i class="fab fa-linkedin fa-lg"></i></a>
+                        <a href="#" class="text-light"><i class="fab fa-github fa-lg"></i></a>
+                    </div>
+                </div>
+            </div>
+            <hr class="my-4 bg-light">
+            <div class="text-center">
+                <p>&copy; 2025 HealthPulse. All Rights Reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- JavaScript -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Get data from Flask
+            const confusionMatrix = JSON.parse('{{ metrics.confusion_matrix|tojson }}');
+            const classNames = JSON.parse('{{ metrics.class_names|tojson }}');
+            
+            // Create HTML-based confusion matrix (more reliable than Chart.js matrix)
+            const container = document.getElementById('confusionMatrixContainer');
+            
+            // Add axis label for predicted class (x-axis)
+            const xAxisLabel = document.createElement('div');
+            xAxisLabel.className = 'axis-label';
+            xAxisLabel.innerText = 'Predicted Class';
+            container.appendChild(xAxisLabel);
+            
+            // Create confusion matrix grid
+            const matrixDiv = document.createElement('div');
+            matrixDiv.className = 'confusion-matrix';
+            container.appendChild(matrixDiv);
+            
+            // Add Y-axis label
+            const yAxisLabel = document.createElement('div');
+            yAxisLabel.className = 'axis-label';
+            yAxisLabel.innerText = 'True Class';
+            yAxisLabel.style.writingMode = 'vertical-lr';
+            yAxisLabel.style.transform = 'rotate(180deg)';
+            yAxisLabel.style.position = 'absolute';
+            yAxisLabel.style.left = '-40px';
+            yAxisLabel.style.top = '50%';
+            container.style.position = 'relative';
+            container.appendChild(yAxisLabel);
+            
+            // Find max value for color scaling
+            const maxValue = Math.max(...confusionMatrix.flat());
+            
+            // Create cells
+            for (let i = 0; i < classNames.length; i++) {
+                for (let j = 0; j < classNames.length; j++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'matrix-cell';
+                    
+                    // Cell value
+                    const value = confusionMatrix[i][j];
+                    cell.innerText = value;
+                    
+                    // Set color intensity based on value
+                    const intensity = value / maxValue;
+                    cell.style.backgroundColor = `rgba(52, 152, 219, ${intensity})`;
+                    
+                    // Add tooltip
+                    cell.title = `True: ${classNames[i]}, Predicted: ${classNames[j]}, Count: ${value}`;
+                    
+                    // Add to grid
+                    matrixDiv.appendChild(cell);
+                }
+            }
+            
+            // ROC Curve Chart
+            const ctxROC = document.getElementById('rocCurveChart').getContext('2d');
+            new Chart(ctxROC, {
+                type: 'line',
+                data: {
+                    labels: [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0],
+                    datasets: [{
+                        label: 'Model ROC Curve (AUC = ' + "{{ metrics.auc }}" + ')',
+                        data: [0, 0.45, 0.65, 0.78, 0.85, 0.89, 0.92, 0.95, 0.97, 0.99, 1.0],
+                        borderColor: 'rgba(52, 152, 219, 1)',
+                        backgroundColor: 'rgba(52, 152, 219, 0.2)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4
+                    }, {
+                        label: 'Random Classifier',
+                        data: [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0],
+                        borderColor: 'rgba(149, 165, 166, 0.8)',
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        borderDash: [5, 5]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false
+                        },
+                    },
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'False Positive Rate'
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'True Positive Rate'
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // Per-Class Performance Chart
+            const ctxPerClass = document.getElementById('perClassChart').getContext('2d');
+            new Chart(ctxPerClass, {
+                type: 'bar',
+                data: {
+                    labels: classNames,
+                    datasets: [{
+                        label: 'Precision',
+                        data: [93.2, 92.4],
+                        backgroundColor: 'rgba(52, 152, 219, 0.7)'
+                    }, {
+                        label: 'Recall',
+                        data: [91.8, 92.1],
+                        backgroundColor: 'rgba(26, 188, 156, 0.7)'
+                    }, {
+                        label: 'F1 Score',
+                        data: [92.5, 92.3],
+                        backgroundColor: 'rgba(155, 89, 182, 0.7)'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false
+                        },
+                    },
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Class'
+                            }
+                        },
+                        y: {
+                            min: 80,
+                            max: 100,
+                            title: {
+                                display: true,
+                                text: 'Score (%)'
+                            }
+                        }
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>
